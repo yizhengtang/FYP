@@ -1,6 +1,9 @@
 venv/
-
 ##Backend
-backend/.env
+
+backend/credentials.json
+backend/token.json 
+backend/app/__pycache__/
 
 ##Frontend
+
