@@ -1,9 +1,17 @@
 venv/
 
 ##Backend
+# Environment files
 backend/.env
+backend/*/.env
+
+# OAuth credentials and tokens
 backend/client_secret.json
+backend/*/client_secret.json
+backend/*/credentials.json
 backend/token_files/
+backend/*/token_files/
+backend/*/credentials/
 
 # Python cache files
 __pycache__/

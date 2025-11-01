@@ -8,8 +8,8 @@ from email.mime.base import MIMEBase
 from email import encoders
 from Google_apis import create_gmail_service
 
-def initialize_gmail_service(client_file, api_name = 'gmail', api_version = 'v1', scopes = ['https://mail.google.com/']):
-    service = create_gmail_service(client_file, api_name, api_version, scopes)
+def initialize_gmail_service(api_name = 'gmail', api_version = 'v1', scopes = ['https://mail.google.com/']):
+    service = create_gmail_service(api_name, api_version, scopes)
     return service
 
 #Helper function to extract the body from email payload (data structure in email messages that contains the actual content of the email) (body text, headers, attachments ...)
@@ -19,6 +19,9 @@ def extract_body(payload):
     body = '<Text body not available>'
 
     #Checks if parts or body exists in the payload
+    #Gmail API structures email content in parts, especially for multipart emails (HTML + plain text)
+    #Sometimes it can have nested parts, Base64 encoded content.
+    #Multipart emails are the most common format used today, in this loop it will iterate through the parts to find the plain text version of the email body.
     if 'parts' in payload:
         for part in payload['parts']:
             
@@ -131,3 +134,33 @@ def get_email_message_details(service, message_id, user_id='me'):
         'label': label
     }
     return email_details 
+
+def send_email_with_attachment(service, to, subject, body, body_type='plain', attachment_paths=None):
+    message = MIMEMultipart()
+    message['to'] = to
+    message['subject'] = subject
+
+    if body_type.lower() not in ['plain', 'html']:
+        raise ValueError("body_type must be either 'plain' or 'html'")
+    
+    message.attach(MIMEText(body, body_type.lower()))
+
+    if attachment_paths:
+        for attachment_path in attachment_paths:
+            if os.path.exists(attachment_path):
+                filename = os.path.basename(attachment_path)
+
+                with open(attachment_path, 'rb') as attachment_file:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment_file.read())
+
+                encoders.encode_base64(part)
+
+                part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+                
+                message.attach(part)
+
+            else:
+                raise FileNotFoundError(f"Attachment file '{attachment_path}' not found.")
+            
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
