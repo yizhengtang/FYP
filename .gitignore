@@ -2,8 +2,8 @@ venv/
 
 ##Backend
 backend/.env
+backend/Gmail/token_files/
 backend/client_secret.json
-backend/token_files/
 
 # Python cache files
 __pycache__/
