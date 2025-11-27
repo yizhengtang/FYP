@@ -6,7 +6,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-from Google_apis import create_gmail_service
+from Google_API import create_gmail_service
 
 def initialize_gmail_service(api_name = 'gmail', api_version = 'v1', scopes = ['https://mail.google.com/']):
     service = create_gmail_service(api_name, api_version, scopes)
