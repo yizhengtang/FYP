@@ -1,4 +1,5 @@
-import os.path
+#This script handles the creation of Gmail service objects using OAuth2 authentication.
+import os
 from dotenv import load_dotenv
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -60,7 +61,15 @@ def create_gmail_service(api_name, api_version, *scopes, prefix =''):
     #This statement checks if the credentials are valid, it can be either expired or mising. If expired, it automatically refreshes one, if missingm it goes through the OAuth flow.    
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            #Try block to attempt to refresh the token using the refresh function
+            #Except block to ensure that it will re-authenticate if the refresh fails
+            try:
+                print("User's credentials have expired. Attempting to refresh user credentials.")
+                creds.refresh(Request())
+            except Exception:
+                print("Refresh user credentials failed. Re-running OAuth flow.")
+                flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+                creds = flow.run_local_server(port=8080, access_type='offline', prompt='consent')
         else:
             flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
             #Make sure it always ask for consent and offline access to get refresh tokens.

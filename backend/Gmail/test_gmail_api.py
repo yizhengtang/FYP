@@ -2,7 +2,7 @@ from gmail_api import initialize_gmail_service, get_email_messages, get_email_me
 
 service = initialize_gmail_service()
 
-emails = get_email_messages(service, max_results=5)
+emails = get_email_messages(service, max_results=1)
 
 print(f"\nFetching details for {len(emails)} emails...\n")
 
