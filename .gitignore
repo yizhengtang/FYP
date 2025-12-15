@@ -2,5 +2,16 @@ venv/
 
 ##Backend
 backend/.env
+backend/Gmail/token_files/
+backend/client_secret.json
+backend/Outlook/*.txt
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
 
 ##Frontend
+
