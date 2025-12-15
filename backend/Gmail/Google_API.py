@@ -13,7 +13,6 @@ load_dotenv()
 #First function: Create a gmail service, takes in four parameters.
 #Handles the creation of service objects for different Google APIs.
 
-#client_secret_file: Path to the client secret file, contains credentials for the google application.
 #api_name: Name of the Google API to connect to (e.g., 'gmail').
 #api_version: Version of the API to use (e.g., 'v1').
 #scopes: Define the level of access the application is requesting.
@@ -65,16 +64,22 @@ def create_gmail_service(api_name, api_version, *scopes, prefix =''):
             #Except block to ensure that it will re-authenticate if the refresh fails
             try:
                 print("User's credentials have expired. Attempting to refresh user credentials.")
+                #What happens here is that it sends a HTTP Post request to the token URI with the refresh token to get a new access token.
                 creds.refresh(Request())
             except Exception:
                 print("Refresh user credentials failed. Re-running OAuth flow.")
                 flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
                 creds = flow.run_local_server(port=8080, access_type='offline', prompt='consent')
         else:
+            #This is a helper class from Google's library that simplifies the OAuth 2.0 authorization flow for web apps.
+            #Basically it creates a flow object that contains: WHere to send the user to authorize, what permission to request (scopes).
             flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+
+            #Starts a local web server (8080) to receive the OAuth callback
             #Make sure it always ask for consent and offline access to get refresh tokens.
             creds = flow.run_local_server(port=8080, access_type='offline', prompt='consent')
 
+        #Save the token.
         with open(os.path.join(working_dir, token_dir, token_file), 'w') as token:
             token.write(creds.to_json())
 

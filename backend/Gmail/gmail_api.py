@@ -188,3 +188,51 @@ def send_email_with_attachment(service, to, subject, body, body_type='plain', at
     ).execute()
 
     return sent_message
+
+#This download function will download attachments from a specific email message.
+def download_attachments(service, user_id, message_id, download_dir):
+    #Fetch the full email message using the provided message ID.
+    message = service.users().messages().get(userId=user_id, id=message_id, format='full').execute()
+    payload = message.get('payload', {})
+    parts = payload.get('parts', [])
+
+    #Ensure the download directory exists, if not create it.
+    if not os.path.exists(download_dir):
+        os.makedirs(download_dir)
+
+    #Iterate through the parts of the email to find attachments.
+    for part in parts:
+        filename = part.get('filename')
+        body = part.get('body', {})
+        attachment_id = body.get('attachmentId')
+
+        #If an attachment is found (filename and attachment ID exist)
+        if filename and attachment_id:
+            #Use the Gmail API to fetch the attachment data using the attachment ID.
+            attachment = service.users().messages().attachments().get(
+                userId=user_id,
+                messageId=message_id,
+                id=attachment_id
+            ).execute()
+
+            #Decode the Base64 encoded attachment data.
+            file_data = base64.urlsafe_b64decode(attachment.get('data', '').encode('UTF-8'))
+
+            #Define the full path to save the attachment.
+            file_path = os.path.join(download_dir, filename)
+
+            #Write the decoded data to a file in binary mode.
+            with open(file_path, 'wb') as f:
+                f.write(file_data)
+
+            print(f"Attachment '{filename}' downloaded to '{file_path}'")
+            
+
+def download_attachments_all(service, user_id, message_id, download_dir):
+    thread = service.users().threads().get(userId=user_id, id=message_id).execute()
+    messages = thread.get('messages', [])
+    for msg in messages:
+        download_attachments(service, user_id, msg['id'], download_dir)
+    gmail_service = service.users().messages()
+    return gmail_service
+        
