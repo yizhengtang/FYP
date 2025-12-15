@@ -135,4 +135,56 @@ def get_email_message_details(service, message_id, user_id='me'):
     }
     return email_details 
 
+#This function will send an email with attachments.
+def send_email_with_attachment(service, to, subject, body, body_type='plain', attachment_paths=None):
+    #First create the email, by creating a MIMEMultipart object to represent the email message that is about to send.
+    message = MIMEMultipart()
+    message['to'] = to
+    message['subject'] = subject
 
+    #Validates the body_type input, ensures that it is either plain or HTML.
+    if body_type.lower() not in ['plain', 'html']:
+        raise ValueError("body_type must be either 'plain' or 'html'")
+    
+    #Attach the email body to the message object using MIMEText, along by specifying the body type.
+    message.attach(MIMEText(body, body_type.lower()))
+
+    #This block will check for the attachment paths provided.
+    if attachment_paths:
+        #Iterate through each attachment path to attach files to the email.
+        for attachment_path in attachment_paths:
+            #For each attachment found, first check if the file exists.
+            if os.path.exists(attachment_path):
+                #Extract the filename.
+                filename = os.path.basename(attachment_path)
+
+                #Open the file in binary read mode (rb) to read it's content.
+                with open(attachment_path, 'rb') as attachment_file:
+                    #Creates a MIME part with type application/octet-stream, which is a generic binary file type.
+                    part = MIMEBase('application', 'octet-stream')
+                    #Reads the entire file and set it as the payload.
+                    part.set_payload(attachment_file.read())
+
+                #NExt step is to encode the payload using Base64 encoding.
+                #This ensures the data remains safe during email transmission.
+                encoders.encode_base64(part)
+
+                #THen add a header to the attachment part to indicate it's an attachment with the filename.   
+                part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+                
+                #After everything attach the part to the main message object.
+                message.attach(part)
+
+            else:
+                raise FileNotFoundError(f"Attachment file '{attachment_path}' not found.")
+
+    #First encode the entire message as a url save base64 string.        
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+
+    #Use the Gmail API to send the email message.
+    sent_message = service.users().messages().send(
+        userId='me',
+        body={'raw': raw_message}
+    ).execute()
+
+    return sent_message
