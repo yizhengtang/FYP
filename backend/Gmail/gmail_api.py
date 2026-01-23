@@ -227,7 +227,7 @@ def download_attachments(service, user_id, message_id, download_dir):
 
             print(f"Attachment '{filename}' downloaded to '{file_path}'")
             
-
+#This download all function will download attachments from all emails in a thread.
 def download_attachments_all(service, user_id, message_id, download_dir):
     thread = service.users().threads().get(userId=user_id, id=message_id).execute()
     messages = thread.get('messages', [])
@@ -236,3 +236,45 @@ def download_attachments_all(service, user_id, message_id, download_dir):
     gmail_service = service.users().messages()
     return gmail_service
         
+#This function will try to look for individual emails.
+def search_emails(service, query, user_id='me', max_results=5):
+    messages = []
+    next_page_token = None
+
+    #THis while loop will continue fetching email messages until the maximum results is reached or no more messages left.
+    while True:
+        result = service.users().messages().list(
+            userId=user_id,
+            q=query,
+            pageToken=next_page_token,
+            maxResults=min(500, max_results - len(messages)) if max_results else 500
+        ).execute()
+
+        messages.extend(result.get('messages', []))
+        next_page_token = result.get('nextPageToken')
+
+        if not next_page_token or (max_results and len(messages) >= max_results):
+            break
+
+    return messages[:max_results] if max_results else messages
+
+#This function will return the entire thread for emails that matches the query string.
+def search_email_conversations(service, query, user_id='me', max_results=5):
+    threads = []
+    next_page_token = None
+
+    while True:
+        result = service.users().threads().list(
+            userId=user_id,
+            q=query,
+            pageToken=next_page_token,
+            maxResults=min(500, max_results - len(threads)) if max_results else 500
+        ).execute()
+
+        threads.extend(result.get('threads', []))
+        next_page_token = result.get('nextPageToken')
+
+        if not next_page_token or (max_results and len(threads) >= max_results):
+            break
+
+    return threads[:max_results] if max_results else threads
