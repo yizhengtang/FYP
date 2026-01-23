@@ -1,4 +1,3 @@
-import marimo as mo
 from pathlib import Path
 from gmail_api import send_email_with_attachment, initialize_gmail_service
 
