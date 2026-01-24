@@ -278,3 +278,70 @@ def search_email_conversations(service, query, user_id='me', max_results=5):
             break
 
     return threads[:max_results] if max_results else threads
+
+#This function will create a new label.
+def create_label(service, name, label_list_visibility='labelShow', message_list_visibility='show'):
+    label = {
+        'name': name,
+        #LabelListVisibility controls whether the label is shown in the label list in the web app, messageListVisibility controls whether the label is showing in an email message.
+        'labelListVisibility': label_list_visibility,
+        'messageListVisibility': message_list_visibility
+    }
+    created_label = service.users().labels().create(userId='me', body=label).execute()
+    return created_label
+
+#This function will list all labels.
+def list_labels(service, user_id='me'):
+    results = service.users().labels().list(userId=user_id).execute()
+    labels = results.get('labels', [])
+    return labels
+
+#Thius function will get details for a specific label by ID.
+def get_label_details(service, label_id, user_id='me'):
+    label = service.users().labels().get(userId=user_id, id=label_id).execute()
+    return label
+
+#This function will modify an existing label.
+def modify_labels(service, label_id, **updates):
+    label = service.users().labels().get(userId='me', id=label_id).execute()
+    for key, value in updates.items():
+        label[key] = value
+    updated_label = service.users().labels().update(userId='me', id=label_id, body=label).execute()
+    return updated_label
+
+#Tjis function will delete a label by ID.
+def delete_label(service, label_id, user_id='me'):
+    service.users().labels().delete(userId=user_id, id=label_id).execute()
+    return f'Label with ID {label_id} deleted successfully.'
+
+#Helper function to map label ID using given label name.
+def map_label_name_to_id(service, label_name, user_id='me'):
+    labels = list_labels(service, user_id)
+    for label in labels:
+        if label['name'].lower() == label_name.lower():
+            return label['id']
+    return None
+
+#This function will add/delete labels from a specific email message.
+def modify_email_labels(service, user_id, message_id, add_labels = None, remove_labels = None):
+    #this function will process labels in batches to avoid exceeding API limits.
+    def batch_labels(labels, batch_size = 100):
+        return [labels[i:i + batch_size] for i in range(0, len(labels), batch_size)]
+    if add_labels:
+        for batch in batch_labels(add_labels):
+            service.users().messages().modify(
+                userId=user_id,
+                id=message_id,
+                body={'addLabelIds': batch}
+            ).execute()
+
+    if remove_labels:
+        for batch in batch_labels(remove_labels):
+            service.users().messages().modify(
+                userId=user_id,
+                id=message_id,
+                body={'removeLabelIds': batch}
+            ).execute()
+
+    return f'Labels modified for message ID {message_id}.'
+
