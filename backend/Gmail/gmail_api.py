@@ -345,3 +345,38 @@ def modify_email_labels(service, user_id, message_id, add_labels = None, remove_
 
     return f'Labels modified for message ID {message_id}.'
 
+#This function will trash a specific email.
+def trash_email(service, user_id, message_id):
+    service.users().messages().trash(userId=user_id, id=message_id).execute()
+    return f'Message ID {message_id} moved to trash.'
+
+#This function allows trashing multiple emails by batch.
+def trash_email_in_batch(service, user_id, message_ids):
+    batch = service.new_batch_http_request()
+    for message_id in message_ids:
+        batch.add(service.users().messages().trash(userId=user_id, id=message_id))
+    batch.execute()
+    return f'Trashed {len(message_ids)} messages.'
+
+#This function will untrash a specific email.
+def untrash_email(service, user_id, message_id):
+    service.users().messages().untrash(userId=user_id, id=message_id).execute()
+    return f'Message ID {message_id} untrashed.'
+
+#This function will untrash multiple emails by batch.
+def untrash_email_in_batch(service, user_id, message_ids):
+    batch = service.new_batch_http_request()
+    for message_id in message_ids:
+        batch.add(service.users().messages().untrash(userId=user_id, id=message_id))
+    batch.execute()
+
+    return f'Untrashed {len(message_ids)} messages.'
+
+#This function permanently deletes an email.
+def delete_email(service, user_id, message_id):
+    service.users().messages().delete(userId=user_id, id=message_id).execute()
+    return f'Message ID {message_id} deleted permanently.'
+
+def empty_trash(service, user_id='me'):
+    service.users().messages().emptyTrash(userId=user_id).execute()
+    return 'Trash emptied successfully.'
