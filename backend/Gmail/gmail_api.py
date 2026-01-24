@@ -377,6 +377,30 @@ def delete_email(service, user_id, message_id):
     service.users().messages().delete(userId=user_id, id=message_id).execute()
     return f'Message ID {message_id} deleted permanently.'
 
-def empty_trash(service, user_id='me'):
-    service.users().messages().emptyTrash(userId=user_id).execute()
-    return 'Trash emptied successfully.'
+def empty_trash(service):
+    page_token = None
+    total_deleted = 0
+
+    while True:
+        response = service.users().messages().list(
+            userId= 'me',
+            q='in:trash',
+            pageToken=page_token,
+            maxResults=500
+        ).execute()
+
+        messages = response.get('messages', [])
+        if not messages:
+            break
+
+        batch = service.new_batch_http_request()
+        for message in messages:
+            batch.add(service.users().messages().delete(userId='me', id=message['id']))
+        batch.execute()
+
+        total_deleted += len(messages)
+
+        page_token = response.get('nextPageToken')
+        if not page_token:
+            break
+    return total_deleted
