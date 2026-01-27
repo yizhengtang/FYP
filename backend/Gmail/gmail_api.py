@@ -522,3 +522,29 @@ def send_draft_email(service, draft_id):
 def delete_draft_email(service, draft_id):
     service.users().drafts().delete(userId='me', id=draft_id).execute()
     return f'Draft ID {draft_id} deleted successfully.'
+
+#this function will get the entire conversation of an email by ID.
+#The way it works is it will look for the thread ID in the email message, then it will fetch all messages with details into a list using a for loop.
+#Unlike the search email conversations function, this function returns the full details of a conversation.
+def get_email_conversations(service, message_id):
+    message = service.users().messages().get(userId='me', id=message_id, format='minimal').execute()
+    thread_id = message.get('threadId')
+    thread = service.users().threads().get(userId='me', id=thread_id).execute()
+
+    processed_messages = []
+    for msg in thread['messages']:
+        subject = next((header['value'] for header in msg['payload'].get('headers', []) if header['name'].lower() == 'subject'), 'No subject')
+        sender = next((header['value'] for header in msg['payload'].get('headers', []) if header['name'].lower() == 'from'), 'Unknown sender')
+        recipient = next((header['value'] for header in msg['payload'].get('headers', []) if header['name'].lower() == 'to'), 'Unknown recipient(s)')
+        date = next((header['value'] for header in msg['payload'].get('headers', []) if header['name'].lower() == 'date'), 'No date available')
+        body = extract_body(msg['payload'])
+
+        processed_messages.append({
+            'id': msg['id'],
+            'subject': subject,
+            'from': sender,
+            'to': recipient,
+            'body': body,
+            'date': date
+        })
+    return processed_messages

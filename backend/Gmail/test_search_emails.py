@@ -2,7 +2,7 @@ from gmail_api import initialize_gmail_service, get_email_message_details, searc
 
 service = initialize_gmail_service()
 
-query = 'security'
+query = 'here is the follow up email'
 emails = search_emails(service, query, max_results=5)
 
 print(f"\nFetching details for {len(emails)} emails matching query: '{query}'\n")
