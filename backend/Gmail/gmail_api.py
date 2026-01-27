@@ -89,7 +89,7 @@ def get_email_messages(service, user_id='me', label_ids = None, folder_name = 'I
     #After the loop ends, return the messages list, slicing it to the specified max results.
     #This ensures we return the exact number of messages requested even if we retrieve more due to the batching process.
     return messages[:max_results] if max_results else messages   
-
+  
 #This function will retrieve the full details of a specific email.
 #Takes in message_id as a parmeter to identify the email to fetch.
 def get_email_message_details(service, message_id, user_id='me'):
@@ -375,7 +375,7 @@ def untrash_email_in_batch(service, user_id, message_ids):
 #This function permanently deletes an email.
 def delete_email(service, user_id, message_id):
     service.users().messages().delete(userId=user_id, id=message_id).execute()
-    return f'Message ID {message_id} deleted permanently.'
+    return f'Message ID {message_id} deleted successfully.'
 
 def empty_trash(service):
     page_token = None
@@ -404,3 +404,121 @@ def empty_trash(service):
         if not page_token:
             break
     return total_deleted
+
+#This function will create a draft email message.
+#The function is pretty much like the send email function, but instead of sending the email, it saves it as a draft.
+#Create draft is done by using the drafts.create method from the Gmail API.
+def create_draft_email(service, to, subject, body, body_type='plain', attachment_paths=None):
+    message = MIMEMultipart()
+    message['to'] = to
+    message['subject'] = subject
+
+    if body_type.lower() not in ['plain', 'html']:
+        raise ValueError("body_type must be either 'plain' or 'html'")
+    
+    message.attach(MIMEText(body, body_type.lower()))
+
+    if attachment_paths:
+        for attachment_path in attachment_paths:
+            if os.path.exists(attachment_path):
+                filename = os.path.basename(attachment_path)
+
+                with open(attachment_path, 'rb') as attachment_file:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment_file.read())
+
+                encoders.encode_base64(part)
+                part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+                message.attach(part)
+
+            else:
+                raise FileNotFoundError(f"Attachment file '{attachment_path}' not found.")
+            
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+
+    draft = service.users().drafts().create(
+        userId='me',
+        body={'message': {'raw': raw_message}}
+    ).execute()
+
+    return draft
+    
+#This function will list all draft email messages.
+#Use while loop to fetch the draft emails in the draft folder using the drafts list method.
+#Breaks when mac results is reached or nextpagetoken returns none.
+def list_draft_email_messages(service, user_id='me', max_results=5):
+    drafts = []
+    next_page_token = None
+
+    while True:
+        result = service.users().drafts().list(
+            userId=user_id,
+            pageToken=next_page_token,
+            maxResults=min(500, max_results - len(drafts)) if max_results else 500
+        ).execute()
+
+        drafts.extend(result.get('drafts', []))
+        next_page_token = result.get('nextPageToken')
+
+        if not next_page_token or (max_results and len(drafts) >= max_results):
+            break
+
+    return drafts[:max_results] if max_results else drafts
+
+#This function will get the detail of a specific draft email by ID.
+#Also pretty much same as the get email message details function, but instead this uses the drafts.get method to get the draft email details.
+#Return the draft details in a dictionary format.
+def get_draft_email_details(service, draft_id, format='full'):
+    draft_detail = service.users().drafts().get(userId='me', id=draft_id, format=format).execute()
+    draft_id = draft_detail['id']
+    draft_message = draft_detail['message']
+    draft_payload = draft_message['payload']
+    headers = draft_payload.get('headers', [])
+    subject = next((header['value'] for header in headers if header['name'].lower() == 'subject'), None)
+    if not subject:
+        subject = draft_message.get('subject', 'No subject')
+    sender = next((header['value'] for header in headers if header['name'].lower() == 'from'), 'Unknown sender')
+    recipient = next((header['value'] for header in headers if header['name'].lower() == 'to'), 'Unknown recipient(s)')
+    snippet = draft_message.get('snippet', 'No snippet available')
+    thread_id = draft_message.get('threadId', draft_id)
+    has_attachments = any(part.get('filename') for part in draft_payload.get('parts', []) if part.get('filename'))
+    date = next((header['value'] for header in headers if header['name'].lower() == 'date'), 'No date available')
+    star = draft_message.get('labelIds', []).count('STARRED') > 0
+    label = ' , '.join(draft_message.get('labelIds', []))
+
+    body = '<Text body not available>'
+    if 'parts' in draft_payload:
+        for part in draft_payload['parts']:
+            if part['mimeType'] == 'multipart/alternative':
+                for subpart in part['parts']:
+                    if subpart['mimeType'] == 'text/plain' and 'data' in subpart['body']:
+                        body = base64.urlsafe_b64decode(subpart['body']['data']).decode('utf-8')
+                        break
+            elif part['mimeType'] == 'text/plain' and 'data' in part['body']:
+                body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+                break
+
+    draft_details = {
+        'subject': subject,
+        'from': sender,
+        'to': recipient,
+        'body': body,
+        'snippet': snippet,
+        'has_attachments': has_attachments,
+        'date': date,
+        'starred': star,
+        'label': label
+    }
+    return draft_details
+
+#This function will send a draft email by ID.
+#This is also similar to the send email function, but instead this uses the drafts.send method for sending a draft message.
+def send_draft_email(service, draft_id):
+    draft = service.users().drafts().send(userId='me', body={'id': draft_id}).execute()
+    return draft
+
+#This function deletes a draft email by ID.
+#Similar to delete email function, but instead it uses the drafts.delete method to delete a draft email.
+def delete_draft_email(service, draft_id):
+    service.users().drafts().delete(userId='me', id=draft_id).execute()
+    return f'Draft ID {draft_id} deleted successfully.'
