@@ -4,6 +4,9 @@ A Final Year Project by Yi Zheng Tang at Atlantic Technological University (ATU)
 
 This web app consolidates Gmail and Outlook into a single unified inbox. AI agents automatically summarize emails, categorize them, extract calendar events, score priority, detect spam, and generate reply drafts. A RAG (Retrieval-Augmented Generation) pipeline embeds your inbox into a local vector database so the AI can retrieve relevant context before responding.
 
+Project Poster: https://github.com/yizhengtang/Intellimail/blob/master/documents/FYP%20Poster.pdf
+Project Presentation: https://github.com/yizhengtang/Intellimail/blob/master/documents/Intellimail.pdf
+
 ---
 
 ## Features
